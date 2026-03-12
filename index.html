@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Natural Language GIS Explorer</title>
+    <script src="https://cdn.jsdelivr.net/npm/ol@v10.8.0/dist/ol.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.8.0/ol.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #f0f2f5;
+            --surface: #ffffff;
+            --border: #e2e6ea;
+            --text-primary: #1a1d23;
+            --text-secondary: #6b7280;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --sidebar-w: 300px;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        header h1 { font-size: 1.125rem; font-weight: 600; letter-spacing: -0.01em; }
+        .header-actions { display: flex; gap: 8px; }
+        .icon-btn {
+            width: 36px; height: 36px; border-radius: 50%;
+            border: 1px solid var(--border); background: var(--surface);
+            cursor: pointer; display: flex; align-items: center;
+            justify-content: center; transition: background 0.15s;
+        }
+        .icon-btn:hover { background: var(--bg); }
+        .icon-btn svg {
+            width: 18px; height: 18px; stroke: var(--text-secondary);
+            fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round;
+        }
+
+        /* Main layout */
+        .main { display: flex; flex: 1; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-w);
+            flex-shrink: 0;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 20px 16px;
+            overflow-y: auto;
+        }
+        label.field-label {
+            font-size: 0.75rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            color: var(--text-secondary); display: block; margin-bottom: 6px;
+        }
+
+        /* Select */
+        .select-wrapper { position: relative; }
+        .select-wrapper select {
+            width: 100%; padding: 9px 36px 9px 12px;
+            border: 1px solid var(--border); border-radius: 8px;
+            background: var(--surface); font-family: 'DM Mono', monospace;
+            font-size: 0.8rem; color: var(--text-primary);
+            appearance: none; cursor: pointer; transition: border-color 0.15s;
+        }
+        .select-wrapper select:focus { outline: none; border-color: var(--accent); }
+        .select-wrapper::after {
+            content: ''; position: absolute; right: 12px; top: 50%;
+            transform: translateY(-50%); border: 5px solid transparent;
+            border-top-color: var(--text-secondary); pointer-events: none;
+        }
+
+        /* Attributes card */
+        .attributes-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+        .attributes-card h3 { font-size: 0.8rem; font-weight: 600; margin-bottom: 12px; }
+        .attr-list { display: flex; flex-direction: column; gap: 8px; }
+        .attr-item {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 0.8rem; font-family: 'DM Mono', monospace;
+            color: var(--text-secondary);
+        }
+        .attr-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--text-secondary); }
+        .attr-dot[data-type="integer"], .attr-dot[data-type="numeric"] { background: #3b82f6; }
+        .attr-dot[data-type="character varying"] { background: #10b981; }
+        .attr-dot[data-type="USER-DEFINED"] { background: #f59e0b; }
+
+        /* Textarea */
+        textarea {
+            width: 100%; height: 140px; padding: 12px;
+            border: 1px solid var(--border); border-radius: 10px;
+            font-family: 'DM Sans', sans-serif; font-size: 0.8rem;
+            color: var(--text-secondary); resize: vertical;
+            background: var(--surface); transition: border-color 0.15s; line-height: 1.5;
+        }
+        textarea:focus { outline: none; border-color: var(--accent); color: var(--text-primary); }
+
+        /* Button */
+        .btn-generate {
+            width: 100%; padding: 11px; background: var(--accent);
+            color: #fff; border: none; border-radius: 10px;
+            font-family: 'DM Sans', sans-serif; font-size: 0.875rem;
+            font-weight: 600; cursor: pointer;
+            transition: background 0.15s, transform 0.1s; margin-top: auto;
+        }
+        .btn-generate:hover { background: var(--accent-hover); }
+        .btn-generate:active { transform: scale(0.98); }
+
+        /* Map area */
+        .map-wrapper { flex: 1; position: relative; background: #dde3ea; }
+
+        #map { width: 100%; height: 100%; }
+
+        /* Force OL canvas to not steal z-index */
+        .ol-viewport { z-index: 0 !important; }
+
+        /* ── Feature Info Panel ── */
+        #info {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            max-width: 340px;
+            max-height: 280px;
+            overflow-y: auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 0.75rem;
+            font-family: 'DM Mono', monospace;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+            z-index: 9999;
+            color: var(--text-secondary);
+            pointer-events: auto;
+            display: none;
+        }
+        #info.visible { display: block; }
+
+        .info-feature { margin-bottom: 10px; }
+        .info-feature:last-child { margin-bottom: 0; }
+
+        .info-feature-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--accent);
+            margin-bottom: 6px;
+        }
+
+        .info-table { width: 100%; border-collapse: collapse; }
+        .info-table tr { border-bottom: 1px solid var(--border); }
+        .info-table tr:last-child { border-bottom: none; }
+
+        .info-key {
+            padding: 3px 8px 3px 0;
+            color: var(--text-secondary);
+            font-weight: 500;
+            white-space: nowrap;
+            width: 40%;
+            vertical-align: top;
+        }
+        .info-val {
+            padding: 3px 0;
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+
+        .info-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .info-header-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+        }
+        .info-close {
+            width: 20px;
+            height: 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1;
+            padding: 0;
+            transition: background 0.15s, color 0.15s;
+            flex-shrink: 0;
+        }
+        .info-close:hover { background: var(--bg); color: var(--text-primary); }
+
+        /* Scrollbar styling for info panel */
+        #info::-webkit-scrollbar { width: 4px; }
+        #info::-webkit-scrollbar-track { background: transparent; }
+        #info::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header>
+        <h1>Natural Language GIS Explorer</h1>
+        <div class="header-actions">
+            <button class="icon-btn" title="Profile">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                </svg>
+            </button>
+            <button class="icon-btn" title="Settings">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <div class="main">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div>
+                <label class="field-label">Select Table</label>
+                <div class="select-wrapper">
+                    <select onchange="getLayerAttributes(event)">
+                        <option value="cn_primary_countries">Global Countries</option>
+                        <option value="hospitals_in_india">Hospitals in India</option>
+                        <option value="in_district">India District</option>
+                        <option value="india_state_boundary">India State Boundaries</option>
+                        <option value="road_drrp">Maharashtra Roads</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="attributes-card">
+                <h3>Available Attributes</h3>
+                <div class="attr-list">
+                    <!-- populated dynamically -->
+                </div>
+            </div>
+
+            <div>
+                <textarea id="criteriaText"
+                    placeholder="Example: Show states where density is greater than 400 and literacy rate above 80%"></textarea>
+            </div>
+
+            <button onclick="filterLayer()" class="btn-generate">Show on Map</button>
+        </aside>
+
+        <!-- Map -->
+        <div class="map-wrapper">
+            <div id="map"></div>
+
+            <!-- Feature info panel — shown on click -->
+            <div id="info">
+                <div class="info-header">
+                    <span class="info-header-title">Feature Info</span>
+                    <button class="info-close" onclick="document.getElementById('info').classList.remove('visible')" title="Close">&#x2715;</button>
+                </div>
+                <div id="info-body"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
