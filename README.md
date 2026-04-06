@@ -4,7 +4,7 @@ A full-stack GIS application that filters **GeoServer WMS layers** using plain E
 
 ---
 
-## ✨ What It Does
+##  What It Does
 
 > _"Show me states where literacy rate is above 80%"_
 > _"Give me all districts in Maharashtra with population greater than 500000"_
@@ -17,11 +17,6 @@ The system:
 4. Dynamically handles `AND` / `OR` logic based on query intent
 5. Applies the filter directly to the WMS layer on the map — no page reload
 
----
-
-## 🏗️ Architecture
-
-```
 Browser (HTML + OpenLayers)
         ↓  natural language query + layer name
 FastAPI Backend (Python)
@@ -32,11 +27,10 @@ FastAPI Backend (Python)
 GeoServer (WMS)
         ↓  WMS GetMap request with CQL_FILTER param applied
 OpenLayers renders filtered layer on map
-```
 
 ---
 
-## ⚙️ Prerequisites
+##  Prerequisites
 
 ### GeoServer
 - GeoServer running locally or on a remote server
@@ -52,7 +46,7 @@ OpenLayers renders filtered layer on map
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### 1. Clone the repo
 
@@ -72,7 +66,7 @@ Create a `.env` file:
 
 ```env
 GROQ_API_KEY=gsk_your_groq_api_key_here
-GEOSERVER_URL=http://localhost:8080/geoserver
+GEOSERVER_URL=your_geoserver_url
 GEOSERVER_WORKSPACE=your_workspace
 ```
 
@@ -88,7 +82,7 @@ Swagger docs at `http://localhost:8000/docs`
 
 ---
 
-## 📡 API Reference
+##  API Reference
 
 ### `POST /api/get-columns`
 
@@ -147,7 +141,7 @@ The `cql_filter` is directly passed to the WMS `CQL_FILTER` parameter in OpenLay
 
 ---
 
-## 🧠 How the NL → CQL Pipeline Works
+##  How the NL → CQL Pipeline Works
 
 ```
 1. SCHEMA DISCOVERY
@@ -181,7 +175,7 @@ The `cql_filter` is directly passed to the WMS `CQL_FILTER` parameter in OpenLay
 
 ---
 
-## 🔀 Dynamic AND / OR Handling
+##  Dynamic AND / OR Handling
 
 The LLM understands query intent to decide the correct logic operator:
 
@@ -196,7 +190,7 @@ The LLM reasons about whether the user is **narrowing** results (AND) or **expan
 
 ---
 
-## 🖥️ Frontend Features
+##  Frontend Features
 
 - **Layer selector** — dynamically populated from GeoServer WMS GetCapabilities
 - **Attribute panel** — field names, types, and sample values shown on layer select
@@ -206,7 +200,7 @@ The LLM reasons about whether the user is **narrowing** results (AND) or **expan
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -219,7 +213,7 @@ The LLM reasons about whether the user is **narrowing** results (AND) or **expan
 
 ---
 
-## 📊 CQL vs OGC XML Filter
+##  CQL vs OGC XML Filter
 
 This project uses **CQL** (GeoServer's native filter language) instead of OGC XML filters used in WFS:
 
@@ -232,7 +226,7 @@ This project uses **CQL** (GeoServer's native filter language) instead of OGC XM
 
 ---
 
-## 🙌 Acknowledgements
+##  Acknowledgements
 
 - [GeoServer](https://geoserver.org/) for the open-source OGC-compliant map server
 - [Groq](https://groq.com/) for blazing fast Llama inference
