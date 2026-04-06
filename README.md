@@ -57,8 +57,8 @@ OpenLayers renders filtered layer on map
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/your-username/nlp-gis-explorer.git
-cd nlp-gis-explorer
+git clone https://github.com/SadhakAkshay/natural_language_cql_filter.git
+cd dynamic_cql_filter
 ```
 
 ### 2. Backend setup
@@ -85,21 +85,6 @@ uvicorn main:app --reload
 API live at `http://localhost:8000`
 Swagger docs at `http://localhost:8000/docs`
 
-### 3. Frontend setup
-
-Open `frontend/index.html` in your browser or serve it:
-
-```bash
-cd frontend
-npx serve .
-```
-
-Update the API base and GeoServer WMS URL in `main.js`:
-
-```javascript
-const API_BASE       = "http://localhost:8000";
-const GEOSERVER_WMS  = "http://localhost:8080/geoserver/wms";
-```
 
 ---
 
